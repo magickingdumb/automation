@@ -1,0 +1,47 @@
+import requests
+from bs4 import BeautifulSoup
+import ssl
+from concurrent.futures import ThreadPoolExecutor
+from urllib3.exceptions import InsecureRequestWarning
+
+# Suppress only the single InsecureRequestWarning from urllib3 needed
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+targets = [
+    "http://you.com",
+    "http://add.com",
+    "http://urls.com",
+    "https://here.com",
+    "https://asMany.com",
+    "https://asYouWant!.com",
+]
+
+def scan_target(url):
+    try:
+        response = requests.get(url, verify=False, timeout=10)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Extract and log SSL certificate info if HTTPS
+        if 'https' in url:
+            cert_info = ssl.get_server_certificate((url.split('//')[1], 443))
+            print(f"[+] SSL certificate info for {url}:\n{cert_info}")
+        
+        # Log server headers
+        server_header = response.headers.get('Server', 'No Server Header Found')
+        print(f"[>] Server header for {url}: {server_header}")
+
+        # Find and log HTML comments
+        comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+        for comment in comments:
+            print(f"[!] Comment found in HTML: {comment.strip()}")
+
+        # Additional data extraction can be placed here
+
+    except requests.exceptions.RequestException as e:
+        print(f"[!] Error scanning {url}: {e}")
+
+# Using ThreadPoolExecutor to scan concurrently
+with ThreadPoolExecutor(max_workers=10) as executor:
+    executor.map(scan_target, targets)
+
+print("[*] Advanced scan completed.")
