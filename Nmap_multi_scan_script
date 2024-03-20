@@ -1,0 +1,43 @@
+import requests
+from bs4 import BeautifulSoup, Comment
+import subprocess
+from urllib.parse import urlparse
+
+# Targets based on the gathered data (Add as many URLs as you need)
+targets = ["https://api.example.com", "https://secure-dfadmin.example.com", "https://example.com", "https://app.example.com"]
+headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)'}
+
+# Validate and sanitize inputs
+def validate_and_sanitize(input_string):
+    return input_string.replace("'", "''").replace(";", "")
+
+# Use Nmap for network scanning and handle its absence
+def perform_nmap_scanning(domain):
+    try:
+        nmap_results = subprocess.run(['nmap', '-A', domain], capture_output=True, text=True, check=True)
+        print(nmap_results.stdout)
+    except FileNotFoundError:
+        print("Nmap not found, skipping network scan.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during Nmap scan: {e}")
+
+# Scan each target URL
+def scan_target(url):
+    print(f"Scanning {url}")
+    try:
+        response = requests.get(url, headers=headers, verify=False, timeout=10)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            print(f"Title: {soup.title.string}")
+            # Find forms, comments, and scripts
+            forms = soup.find_all('form')
+            comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+            scripts = soup.find_all('script')
+            print(f"Found {len(forms)} forms, {len(comments)} comments, and {len(scripts)} scripts")
+            perform_nmap_scanning(urlparse(url).hostname)
+    except requests.RequestException as e:
+        print(f"Error scanning {url}: {str(e)}")
+
+# Main execution
+for target in targets:
+    scan_target(target)
