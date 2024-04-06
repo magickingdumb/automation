@@ -1,0 +1,24 @@
+for i in {1..1000}; do
+  fuzzed_username=$(echo "username" | radamsa | jq -sRr @uri)
+  fuzzed_password=$(echo "password" | radamsa | jq -sRr @uri)
+  login_response_file="login_response_$i.json"
+  auth_response_file="auth_response_$i.json"
+  login_status_code=$(curl -sS -m 30 -X POST "https://www.indrive.com/api/login" -d "username=$fuzzed_username&password=$fuzzed_password" -H "Content-Type: application/x-www-form-urlencoded" -L -o $login_response_file -w "%{http_code}")
+  if [ "$login_status_code" -eq 200 ]; then
+    echo "Login request successful for username: $fuzzed_username"
+    # Parse and analyze the login response
+    jq '.loginDetails' $login_response_file > "parsed_login_$i.json"
+  else
+    echo "Login request failed for username: $fuzzed_username, Status: $login_status_code"
+  fi
+
+  fuzzed_token=$(echo "token" | radamsa | jq -sRr @uri)
+  auth_status_code=$(curl -sS -m 30 -X GET "https://www.indrive.com/api/authenticate?token=$fuzzed_token" -H "Content-Type: application/x-www-form-urlencoded" -L -o $auth_response_file -w "%{http_code}")
+  if [ "$auth_status_code" -eq 200 ]; then
+    echo "Authentication request successful: $fuzzed_token"
+    # Parse and analyze the authentication response
+    jq '.authDetails' $auth_response_file > "parsed_auth_$i.json"
+  else
+    echo "Authentication request failed for token: $fuzzed_token, Status: $auth_status_code"
+  fi
+done
