@@ -1,0 +1,46 @@
+import os
+import subprocess
+
+# Define the target based on the scope file
+target_domains = [line.strip() for line in open("example_scope.txt")]
+
+# Function to run a command and print its output
+def run_command(command):
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    while True:
+        output = process.stdout.readline()
+        if not output and process.poll() is not None:
+            break
+        if output:
+            print(output.strip().decode())
+    rc = process.poll()
+    return rc
+
+# Step 1: Subdomain Enumeration with Amass
+for domain in target_domains:
+    print(f"\n[+] Enumerating subdomains for {domain} using Amass")
+    run_command(f"amass enum -d {domain} -o amass_{domain}.txt")
+
+# Step 2: Subdomain Enumeration with Feroxbuster
+# Assuming we have already collected URLs in amass_domain.txt
+for domain in target_domains:
+    print(f"\n[+] Enumerating subdomains for {domain} using Feroxbuster")
+    run_command(f"feroxbuster -u https://{domain} -x html,php,js -w your_wordlist.txt -o feroxbuster_{domain}.txt")
+
+# Step 3: Running Nmap scans on identified subdomains
+print("\n[+] Running Nmap scans on identified subdomains")
+for domain in target_domains:
+    run_command(f"nmap -sV -oA nmap_{domain} {domain}")
+
+# Step 4: Vulnerability scanning with Nuclei
+print("\n[+] Running Nuclei scans")
+for domain in target_domains:
+    run_command(f"nuclei -u {domain} -o nuclei_{domain}.txt")
+
+# Step 5: XSS scanning with Dalfox (Bypassing GO installation)
+# We can use Docker to run Dalfox if GO is not installed
+print("\n[+] Running Dalfox for XSS scanning")
+for domain in target_domains:
+    run_command(f"docker run --rm -v $(pwd):/work hahwul/dalfox:latest file amass_{domain}.txt pipe -o dalfox_{domain}.txt")
+
+print("\n[+] Automated Bug Bounty Hunting process completed!")
