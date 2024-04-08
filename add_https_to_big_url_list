@@ -1,0 +1,8 @@
+# add_https.py
+with open('urls.txt', 'r') as infile:
+    urls = infile.readlines()
+
+updated_urls = ['https://' + url.strip() for url in urls]
+
+with open('updated_urls.txt', 'w') as outfile:
+    outfile.write('\n'.join(updated_urls))
