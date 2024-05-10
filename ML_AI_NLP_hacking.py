@@ -110,6 +110,6 @@ class WebCrawler:
         self.postgres_conn.commit()
 
 if __name__ == "__main__":
-    crawler = WebCrawler("https://grammarly.com")
+    crawler = WebCrawler("https://example.com")
     asyncio.run(crawler.start_crawl())
     crawler.generate_reports()
