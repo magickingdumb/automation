@@ -1,0 +1,103 @@
+[Gather/locate data, files, paths, etc.]
+[PS = Powershell]
+[CMD-P = Command Prompt]
+
+!!!MAKE SURE YOU ARE RUNNING POWERSHELL & COMMAND_PROMPT AS ADMINISTRATOR!!!
+
+This shows your OS version, total installed memory (RAM), processor, boot time, and other basic details. It helps me understand your system’s baseline hardware configuration.
+[PS] systeminfo
+
+You can run this in CMD or PowerShell.
+FreePhysicalMemory: How much memory is unused.
+TotalVisibleMemorySize: Total available physical memory. It gives you a quick numerical view of current memory pressure.
+[CMD-P or PS] wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value
+
+This lists the processes that are using the most memory (the “Working Set” in bytes). This is crucial to determine whether any processes unexpectedly hog memory.
+[PS] Get-Process | Sort-Object -Descending WS | Select-Object -First 50 Name, Id, WS
+
+..or you can run this cmd which presents memory usage in megabytes 
+[PS] Get-Process | Sort-Object -Descending -Property WorkingSet | Select-Object -First 50 Name, Id, @{Name="Memory_MB";Expression={[math]::Round($_.WorkingSet/1MB,2)}}
+
+Launch Resource Monitor
+[CMD-P] resmon
+
+This shows what is set to run on startup.
+[PS] Get-CimInstance -ClassName Win32_StartupCommand | Select-Object -Property Name, Command, Location
+
+This gives you a list of currently running services. (Some might be unnecessary and could be disabled.)
+[PS] Get-Service | Where-Object {$_.Status -eq "Running"} | Sort-Object DisplayName | Select-Object DisplayName, Status
+
+Free Disk Space
+Sometimes high memory usage is accompanied (or exacerbated) by disk congestion. It’s good to know if your disk is overly full or slow.
+[CMD-P] wmic logicaldisk get name, size, freespace
+
+Clear out temporary directories (but be cautious): (Take care not to delete things that might be in use!)
+ATTENTION: Run this only after reviewing the contents of %TEMP%.
+[PS] Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+Listing the Contents of %TEMP%
+[PS] Get-ChildItem -Path $env:TEMP -Recurse | Format-List FullName, Length, LastWriteTime
+
+Via File Explorer: You can also open the %TEMP% folder with this cmd.
+[PS] explorer.exe $env:TEMP
+
+Removing the Temp Files
+[PS] Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
+
+Additional info Command (More Formatted)
+[PS] Get-Process | Sort-Object -Descending -Property WorkingSet | Select-Object -First 50 Name, Id, @{Name="Memory_MB";Expression={[math]::Round($_.WorkingSet/1MB,2)}}
+
+View Startup Items
+[PS] Get-CimInstance -ClassName Win32_StartupCommand | Select-Object Name, Command, Location
+
+Review Running Services (optional)
+[PS] Get-Service | Where-Object {$_.Status -eq "Running"} | Sort-Object DisplayName | Format-Table DisplayName, Status
+
+If you find any unnecessary heavy processes, close them manually or consider using this.
+[PS] Stop-Process -Id <ProcessID> -Force
+
+|---Disk Space and Cleanup Utilities---|
+
+Launching Disk Cleanup
+[CMD-P] cleanmgr
+...or...
+[PS] Start-Process cleanmgr.exe
+...or...
+You can also automate it
+[CMD-P] cleanmgr /sageset:1 & cleanmgr /sagerun:1
+
+Repair System Files and the Windows Image
+[CMD-P] sfc /scannow
+
+DISM (Deployment Image Servicing and Management).
+This repairs the Windows image if needed.
+[CMD-P] DISM /Online /Cleanup-Image /RestoreHealth
+
+|---Security-Scans---|
+
+Malware and Security Scans
+Run a Full Windows Defender Scan via PowerShell
+[PS] Start-MpScan -ScanType FullScan
+
+Schedule an Offline Scan
+FYI: An offline scan requires a reboot and runs before Windows fully loads.
+[PS] Start-MpWDOScan
+
+For Mechanical Drives – Defragmentation: If you use an HDD, defragment your drive.
+[CMD-P] defrag C: -w -v
+
+For SSDs – Optimize/Trim: Windows automatically runs TRIM on SSDs, but you can invoke optimization manually.
+[CMD-P] defrag C: -o -v
+(Do not defragment SSDs in the traditional sense, as TRIM is more appropriate.)
+
+Check for Windows Updates
+[PS] UsoClient StartScan
+
+Check and Adjust Power Settings, This lists power schemes.
+[CMD-P] powercfg -L
+
+You can then set a scheme, for example, if “High performance” is listed with a GUID.
+[CMD-P] powercfg -S <GUID>
+
+***Side Note - you can use Win+R and a box will pop up, type in 'mrt' to scan your computer for issues, choose the type of scan (Quick, Full[recommended], or Custom) ***
+Reboot your system.
